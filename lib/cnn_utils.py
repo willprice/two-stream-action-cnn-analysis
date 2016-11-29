@@ -1,5 +1,6 @@
 import caffe
 import numpy as np
+from skimage import transform
 import matplotlib.pyplot as plt
 
 
@@ -60,6 +61,24 @@ def show_filters_responses(blob):
             subplot.imshow(filter_responses[row*col + col], interpolation='nearest')
     return fig
 
+def overlay_attention_map(image, attention_map, cmap='jet'):
+    """
+    Colors the single channel attention map which is then overlaid on the
+    image
+    """
+    fig = plt.figure()
+    attention_map -= attention_map.min()
+    if attention_map.max() > 0:
+        attention_map /= attention_map.max()
+    attention_map = transform.resize(attention_map, (image.shape[:2]), order=3, mode='nearest')
+
+    cmap = plt.get_cmap(cmap)
+    attMapV = cmap(attention_map)
+    attMapV = np.delete(attMapV, 3, 2)
+    attention_map = 1 * (1 - attention_map**0.8).reshape(attention_map.shape + (1, )) * image + \
+                    (attention_map**0.8).reshape(attention_map.shape+(1, )) * attMapV
+    plt.imshow(attention_map, interpolation='bicubic')
+    return fig
 
 class ExcitationBackprop(object):
     """
