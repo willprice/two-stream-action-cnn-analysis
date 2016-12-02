@@ -1,6 +1,6 @@
 import caffe
 import numpy as np
-from skimage import transform
+from skimage import transform, color
 import matplotlib.pyplot as plt
 
 
@@ -61,24 +61,23 @@ def show_filters_responses(blob):
             subplot.imshow(filter_responses[row*col + col], interpolation='nearest')
     return fig
 
-def overlay_attention_map(image, attention_map, cmap='jet'):
+def overlay_attention_map(image, attention_map, cmap='jet', alpha=0.8):
     """
     Colors the single channel attention map which is then overlaid on the
     image
     """
-    fig = plt.figure()
+
     attention_map -= attention_map.min()
     if attention_map.max() > 0:
         attention_map /= attention_map.max()
-    attention_map = transform.resize(attention_map, (image.shape[:2]), order=3, mode='nearest')
+    attention_map = transform.resize(attention_map, image.shape[:2], order=3)
 
     cmap = plt.get_cmap(cmap)
-    attMapV = cmap(attention_map)
-    attMapV = np.delete(attMapV, 3, 2)
-    attention_map = 1 * (1 - attention_map**0.8).reshape(attention_map.shape + (1, )) * image + \
-                    (attention_map**0.8).reshape(attention_map.shape+(1, )) * attMapV
-    plt.imshow(attention_map, interpolation='bicubic')
-    return fig
+    attention_heatmap = np.delete(cmap(attention_map), 3, 2)
+    image_masked_with_heatmap = (1 - attention_map**alpha).reshape(attention_map.shape + (1,))*image
+    scaled_heatmap = (attention_map**alpha).reshape(attention_map.shape+(1,))*attention_heatmap
+    heatmap_overlaid_image = image_masked_with_heatmap + scaled_heatmap
+    return heatmap_overlaid_image
 
 class ExcitationBackprop(object):
     """
