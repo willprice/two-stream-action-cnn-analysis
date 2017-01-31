@@ -9,7 +9,7 @@ import click
 @click.command()
 @click.argument('source-dir', type=click.Path(exists=True))
 @click.argument('output-path', type=click.Path())
-@click.option('--frame-pattern', default="frame_%06d.jpg", help="Path to directory containing frames")
+@click.option('--frame-pattern', default="frame_%06d.jpg", help="FFMpeg -i pattern")
 @click.option('--vcodec', default='libx264', help='Video codec')
 @click.option('--fps', default=24, help='Video frames per second')
 def stitch_videos(source_dir, output_path, frame_pattern, vcodec, fps):
@@ -34,6 +34,7 @@ def stitch_videos(source_dir, output_path, frame_pattern, vcodec, fps):
                            "-i", frame_pattern,
                            "-r", str(fps),
                            "-vcodec", vcodec,
+                           "-pattern_type", "glob",
                            output_path],
                           cwd=source_dir,
                           stdin=subprocess.DEVNULL)

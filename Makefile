@@ -57,28 +57,31 @@ GENERATED_TEMPORAL_EXCITATION_FRAMES := $(addprefix $(GENERATED_TEMPORAL_FRAMES_
 GENERATED_TEMPORAL_EXCITATION_VIDEOS := $(addprefix $(GENERATED_TEMPORAL_VIDEOS_ROOT)/,$(addsuffix .mp4,$(BEOID_VIDEOS)))
 
 $(GENERATED_SPATIAL_FRAMES_ROOT)/%: $(BEOID_SPATIAL_ROOT)/%
-	./scripts/generate_spatial_excitation_maps.py \
-		$< \
+	yes | ./scripts/generate_spatial_excitation_maps.py \
+		$^ \
 		$@ \
+		--to-label='
 		--caffemodel $(NET_SPATIAL_CAFFEMODEL) \
 		--prototxt $(NET_SPATIAL_PROTOTXT)
 
-$(GENERATED_TEMPORAL_FRAMES_ROOT)/%: $(BEOID_TEMPORAL_U_ROOT)/% $(BEOID_TEMPORAL_V_ROOT)/%
+$(GENERATED_TEMPORAL_FRAMES_ROOT)/%: $(BEOID_TEMPORAL_U_ROOT)/% $(BEOID_TEMPORAL_V_ROOT)/% $(BEOID_SPATIAL_ROOT)/%
 	./scripts/generate_temporal_excitation_maps.py \
-		$< \
+		$(BEOID_TEMPORAL_U_ROOT) \
+		$(BEOID_TEMPORAL_V_ROOT) \
+		$(BEOID_SPATIAL_ROOT) \
+		$(shell basename $@) \
 		$@ \
 		--caffemodel $(NET_TEMPORAL_CAFFEMODEL) \
 		--prototxt $(NET_TEMPORAL_PROTOTXT)
 
-
 $(GENERATED_SPATIAL_VIDEOS_ROOT)/%.mp4: $(GENERATED_SPATIAL_FRAMES_ROOT)/%
 	./scripts/stitch_video.py \
-		$< \
+		$^ \
 		$@
 
 $(GENERATED_TEMPORAL_VIDEOS_ROOT)/%.mp4: $(GENERATED_TEMPORAL_FRAMES_ROOT)/%
 	./scripts/stitch_video.py \
-		$< \
+		$^ \
 		$@
 
 .PHONY: all

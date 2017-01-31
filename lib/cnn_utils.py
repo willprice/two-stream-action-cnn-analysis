@@ -14,6 +14,19 @@ def imagenet_transformer(net, input_blob='data'):
     transformer.set_raw_scale('data', 255.0)
     return transformer
 
+def ucf101_spatial_transformer(net, input_blob='data'):
+    """
+    Untested
+    :param net:
+    :param input_blob:
+    :return:
+    """
+    transformer = caffe.io.Transformer(
+        {'data': net.blobs[input_blob].data.shape}
+    )
+    transformer.set_mean('data', np.array([103.939, 116.779, 123.68]))
+    transformer.set_raw_scale('data', 255.0)
+    return transformer
 
 def get_layer_output_shapes(net):
     return _get_layer_shapes(net, net.top_names)
@@ -141,20 +154,19 @@ class ExcitationBackprop(object):
 
         # invert the top layer weights
         net.params[self.top_layer_name][0].data[...] *= -1
-        net.backward(start=self.top_layer_name,
-                     end=self.second_top_layer_name)
+        net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
+        # Grab the signal when all uninteresting neurons are set
         buff = net.blobs[self.second_top_blob_name].diff.copy()
 
-        # invert back
+        # restore layer: make all uninteresting neurons uninteresting again
         net.params[self.top_layer_name][0].data[...] *= -1
+        # Grab the signal when only the interesting neuron is set
         net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
-
-        # compute the contrastive
-        # signal
+        # Combine results of inverted and non inverted backprop to compute contrastive signal
         net.blobs[self.second_top_blob_name].diff[...] -= buff
 
-        net.backward(start=self.second_top_layer_name,
-                     end=self.output_layer_name)
+        # compute the contrastive signal
+        net.backward(start=self.second_top_layer_name, end=self.output_layer_name)
         attention_map = np.maximum(
             net.blobs[self.output_blob_name].diff[0].sum(0),
             0

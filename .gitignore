@@ -1,2 +1,7 @@
 **.pyc
 **.ropeproject
+
+data
+experiments
+generated
+.idea

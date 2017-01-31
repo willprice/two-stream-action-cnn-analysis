@@ -1,2 +1,1 @@
-set --local script_dir (dirname (realpath (status -f)))
-set --export PYTHONPATH "$PYTHONPATH:$script_dir/lib"
+set --export PYTHONPATH "$PYTHONPATH:$PWD/lib:$PWD/net_configs"
