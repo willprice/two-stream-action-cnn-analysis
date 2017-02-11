@@ -41,11 +41,23 @@ caffe.set_mode_gpu()
 @click.option('--overlay-offset',
               help='Index of frame from start of flow batch to overlay',
               default=10)
+@click.option('--contrastive/--no-contrastive',
+              default=True,
+              help='Use contrastive excitation backprop, or just excitation backprop')
+@click.option('--desaturate/--no-desaturate',
+              default=False,
+              help='Desaturate underlay image before overlaying excitation map')
+@click.option('--colormap',
+              default='hot',
+              help='matplotlib color map to colorize excitation map')
 def generate_spatial_excitation_maps(net_config_module,
                                      optical_flow_u_dataset_root,
                                      optical_flow_v_dataset_root,
                                      spatial_root, video_name,
-                                     output_dir, label, to_layer, overlay_offset
+                                     output_dir, label, to_layer,
+                                     overlay_offset,
+                                     contrastive,
+                                     desaturate, colormap
                                      ):
     """
     Create an image from each optical flow frame pair (u, v) by forward
@@ -65,8 +77,7 @@ def generate_spatial_excitation_maps(net_config_module,
     optical_flow_v_root = os.path.join(optical_flow_v_dataset_root, video_name)
 
     if not os.path.exists(optical_flow_u_root):
-        raise RuntimeException("Optical flow U directory for {} does not\
-                               exist".format(optical_flow_u_root))
+        raise RuntimeError("Optical flow U directory for {} does not exist".format(optical_flow_u_root))
 
     if not os.path.exists(optical_flow_v_root):
         raise RuntimeException("Optical flow V directory for {} does not\
@@ -86,7 +97,9 @@ def generate_spatial_excitation_maps(net_config_module,
     eb = cnn_utils.ExcitationBackprop(net, net_config.top_blob, net_config.second_top_blob, net_config.bottom_blob)
     spatial_video_root = os.path.join(spatial_root, video_name)
 
-    frame_batches = np.array(get_frame_batches(optical_flow_u_root, optical_flow_v_root, video_name))
+    transformer = net_config.transformer(net)
+    frame_batches = np.array(
+        get_frame_batches(optical_flow_u_root, optical_flow_v_root, video_name, transformer))
     for starting_frame_index, frame_batch in enumerate(frame_batches):
         frame_batch = frame_batch.reshape(1, 20, 224, 224)
         print("Generating excitation maps for frame {}-{}".format(starting_frame_index, starting_frame_index + 20))
@@ -97,25 +110,33 @@ def generate_spatial_excitation_maps(net_config_module,
         ##                                                 starting_frame_index + 11)))
         # end mean normalisation
         eb.prop(frame_batch)
-        attention_map = eb.backprop(label_id)
+        attention_map = eb.backprop(label_id, contrastive=contrastive)
         if not np.any(attention_map):
             print("WARNING: Attention map is all zeroes")
-        underlay = os.path.join(spatial_video_root,
-                                net_config.frame_pattern.format(int(starting_frame_index + overlay_offset + 1)))
-        attention_map_overlaid_image = toimage(cnn_utils.overlay_attention_map(caffe.io.load_image(underlay),
-                                                                               attention_map))
+        underlay = caffe.io.load_image(
+            os.path.join(spatial_video_root,
+                         net_config.frame_pattern.format(int(starting_frame_index
+                                                             +
+                                                             overlay_offset
+                                                             +
+                                                             1))))
+        if desaturate:
+            underlay = color.rgb2gray(underlay)
+        attention_map_overlaid_image = toimage(
+            cnn_utils.overlay_attention_map(underlay, attention_map,
+                                            cmap=colormap)
+        )
         attention_map_overlaid_image.save(
             os.path.join(output_dir,
                          "frame{:06d}-{:06d}.jpg".format(starting_frame_index + 1,
                                                          starting_frame_index + 11)))
 
-def get_frame_batches(optical_flow_u_root, optical_flow_v_root, video_name, batch_size=10):
+def get_frame_batches(optical_flow_u_root, optical_flow_v_root, video_name, transformer, batch_size=10):
     frame_count = get_frame_count(optical_flow_u_root)
     batches = []
     for batch_index in range(0, frame_count - batch_size):
-        batch = get_frame_batch(optical_flow_u_root,
-                                optical_flow_v_root,
-                                start_frame=batch_index, batch_size=batch_size)
+        batch = get_frame_batch(optical_flow_u_root, optical_flow_v_root, transformer, start_frame=batch_index,
+                                batch_size=batch_size)
         batches.append(batch)
     return batches
 
@@ -123,9 +144,10 @@ def get_frame_count(optical_flow_u_root):
     frame_files = os.listdir(optical_flow_u_root)
     return len(frame_files)
 
-def get_frame_batch(optical_flow_u_root, optical_flow_v_root, start_frame=0, batch_size=10):
+def get_frame_batch(optical_flow_u_root, optical_flow_v_root, transformer, start_frame=0, batch_size=10):
     """
     u and v represent the different directions of optical flow
+    :param transformer:
     """
     u_frames = list(os.listdir(optical_flow_u_root))
     v_frames = list(os.listdir(optical_flow_v_root))
@@ -145,15 +167,9 @@ def get_frame_batch(optical_flow_u_root, optical_flow_v_root, start_frame=0, bat
         frames.append(selected_u_frames[i])
         frames.append(selected_v_frames[i])
 
-    frames = [caffe.io.load_image(frame, color=False) for frame in frames]
-    frames = [transform.resize(frame, (224, 224)) for frame in frames]
-    new_frames = []
-    for frame in frames:
-        [width, height, _] = frame.shape
-        # Crop
-        #frame = frame[int(width/15):int(width-width/15),int(height/15):int(height-height/15)]
-        new_frames += transform.resize(frame, (224, 224))
-    return frames
+    raw_frames = np.array([caffe.io.load_image(frame, color=False) for frame in frames])
+    preprocessed_frames = np.array([transformer.preprocess('data', raw_frame) for raw_frame in raw_frames])
+    return preprocessed_frames
 
 def frame_number(frame_filename):
     """

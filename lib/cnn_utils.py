@@ -14,6 +14,18 @@ def imagenet_transformer(net, input_blob='data'):
     transformer.set_raw_scale('data', 255.0)
     return transformer
 
+def flow_transformer(net, input_blob='data'):
+    net_input_shape = net.blobs[input_blob].data.shape
+    height = net_input_shape[2]
+    width = net_input_shape[3]
+    transformer = caffe.io.Transformer(
+        {'data': (1, 1, height, width)}
+    )
+    transformer.set_mean('data', np.array([128]))
+    transformer.set_raw_scale('data', 255.0)
+    return transformer
+
+
 def ucf101_spatial_transformer(net, input_blob='data'):
     """
     Untested
@@ -74,11 +86,13 @@ def show_filters_responses(blob):
             subplot.imshow(filter_responses[row*col + col], interpolation='nearest')
     return fig
 
-def overlay_attention_map(image, attention_map, cmap='jet', alpha=0.8):
+def overlay_attention_map(image, attention_map, cmap='hot', alpha=0.8):
     """
     Colors the single channel attention map which is then overlaid on the
     image
     """
+    if len(image.shape) == 2 or image.shape[2] == 1:
+        image = color.gray2rgb(image)
 
     attention_map -= attention_map.min()
     if attention_map.max() > 0:
@@ -140,7 +154,7 @@ class ExcitationBackprop(object):
         self._set_input(image)
         self.net.forward(end=self.top_layer_name)
 
-    def backprop(self, neuron_id):
+    def backprop(self, neuron_id, contrastive=True):
         # eb = excitation backprop
         caffe.set_mode_eb_gpu()
 
@@ -152,24 +166,29 @@ class ExcitationBackprop(object):
         net.blobs[self.top_blob_name].diff[0][neuron_id] /= \
             net.blobs[self.top_blob_name].diff[0][neuron_id].sum()
 
-        # invert the top layer weights
-        net.params[self.top_layer_name][0].data[...] *= -1
-        net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
-        # Grab the signal when all uninteresting neurons are set
-        buff = net.blobs[self.second_top_blob_name].diff.copy()
+        if contrastive:
+            # invert the top layer weights
+            net.params[self.top_layer_name][0].data[...] *= -1
+            net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
+            # Grab the signal when all uninteresting neurons are set
+            buff = net.blobs[self.second_top_blob_name].diff.copy()
 
-        # restore layer: make all uninteresting neurons uninteresting again
-        net.params[self.top_layer_name][0].data[...] *= -1
-        # Grab the signal when only the interesting neuron is set
-        net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
-        # Combine results of inverted and non inverted backprop to compute contrastive signal
-        net.blobs[self.second_top_blob_name].diff[...] -= buff
+            # restore layer: make all uninteresting neurons uninteresting again
+            net.params[self.top_layer_name][0].data[...] *= -1
+            # Grab the signal when only the interesting neuron is set
+            net.backward(start=self.top_layer_name, end=self.second_top_layer_name)
+            # Combine results of inverted and non inverted backprop to compute contrastive signal
+            net.blobs[self.second_top_blob_name].diff[...] -= buff
 
-        # compute the contrastive signal
-        net.backward(start=self.second_top_layer_name, end=self.output_layer_name)
+            # compute the contrastive signal
+            net.backward(start=self.second_top_layer_name, end=self.output_layer_name)
+        else:
+            net.backward(start=self.top_layer_name, end=self.output_layer_name)
+
         attention_map = np.maximum(
             net.blobs[self.output_blob_name].diff[0].sum(0),
             0
         )
 
         return attention_map
+

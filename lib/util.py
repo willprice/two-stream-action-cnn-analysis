@@ -3,7 +3,6 @@ import numpy as np
 import pylab
 from skimage import transform, filter, color
 import matplotlib.pyplot as plt
-from IPython.core.debugger import Tracer
 
 
 def loadTags(filename):
@@ -23,7 +22,7 @@ def getTagScore(scores, tags, tag2IDs):
 
     return tagScore
 
-def showAttMap(img, attMaps, tagName, overlap = True, blur = False, save = False):
+def showAttMap(img, attMaps, tagName, overlap = True, cmap='autumn', blur = False, save = False, ):
     pylab.rcParams['figure.figsize'] = (12.0, 12.0)
     f, ax = plt.subplots(int(len(tagName)/2+1), 2)
     ax[0,0].imshow(img)
@@ -41,17 +40,17 @@ def showAttMap(img, attMaps, tagName, overlap = True, blur = False, save = False
             attMap -= attMap.min()
             attMap /= attMap.max()
 
-        cmap = plt.get_cmap('jet')
+        cmap = plt.get_cmap(cmap)
         attMapV = cmap(attMap)
         attMapV = np.delete(attMapV, 3, 2)
-#        Tracer()()
         if overlap:
             attMap = 1*(1-attMap**0.8).reshape(attMap.shape + (1,))*img + (attMap**0.8).reshape(attMap.shape+(1,)) * attMapV;
 
 
-        ax[(i+1)/2, (i+1)%2].imshow(attMap, interpolation = 'bicubic')
-        ax[(i+1)/2, (i+1)%2].set_title(tagName[i])
+        current_subplot_axes = ax[(i+1)/2, (i+1)%2]
+        attention_map_subplot = current_subplot_axes.imshow(attMap, interpolation = 'bicubic', cmap=cmap)
+        plt.colorbar(attention_map_subplot, ax=current_subplot_axes)
+        current_subplot_axes.set_title(tagName[i])
 
     if save:
         f.savefig("attentionmaps.jpg")
-

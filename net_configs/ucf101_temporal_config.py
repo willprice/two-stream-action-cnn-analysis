@@ -1,4 +1,5 @@
 import ucf101
+import cnn_utils
 
 
 top_blob = 'fc8'
@@ -10,6 +11,8 @@ labeller = ucf101.labeller
 # Will be run with:
 # frame_pattern.format(frame_index)
 frame_pattern = "frame{:06d}.jpg"
+
+transformer =  cnn_utils.flow_transformer
 
 net_caffemodel_path = '/home/will/nets/vgg_16_ucf101/cuhk_action_temporal_vgg_16_split1.caffemodel'
 net_prototxt_path = '/home/will/nets/vgg_16_ucf101/cuhk_action_temporal_vgg_16_split1_deploy.prototxt'
