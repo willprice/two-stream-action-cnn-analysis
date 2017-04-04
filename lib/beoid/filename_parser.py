@@ -23,37 +23,28 @@ class Object(Symbol):
 
 
 class Objects(List):
-    grammar = Object, maybe_some(omit("+"), Object)
+    grammar = Object, maybe_some("+", Object)
 
 
 class Point(Symbol):
     regex = re.compile(r'\d+')
 
 
-class Range:
-    grammar = attr("start", Point), omit("-"), \
-              attr("end", Point)
-
-    def __str__(self):
-        return "Range([{}, {}])".format(self.start, self.end)
+class Range(str):
+    grammar = attr("start", Point), "-", attr("end", Point)
 
 
-class ActionVideo:
-    grammar = attr("id", NumericId), omit("_"), \
-              attr("location", Location), omit("_"), \
-              attr("action", Action), omit("_"), \
-              attr("objects", Objects), omit("_"), \
-              attr("range", Range), endl
-
-    def __str__(self):
-        return "ActionVideo([id: {}, location: {}, action: {}, objects: {}, range: {}])".format(
-            self.id, self.location, self.action, self.objects, self.range
-        )
+class ActionVideo(str):
+    grammar = attr("id", NumericId), "_", \
+              attr("location", Location), "_", \
+              attr("action", Action), "_", \
+              attr("objects", Objects), "_", \
+              attr("range", Range)
 
 
 if __name__ == '__main__':
-    with open(sys.argv[1], 'r') as f:
-        p = Parser()
-        videos = [p.parse(vid, ActionVideo)[1] for vid in f.readlines()]
-        for video in videos:
-            print(video)
+    import sys
+    vid = sys.argv[1]
+    print("Parsing '{}'".format(vid))
+    parsed = parse(vid, ActionVideo)
+    print("Composed: '{}'".format(compose(parsed)))
