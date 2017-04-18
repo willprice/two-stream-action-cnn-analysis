@@ -5,7 +5,7 @@ _script_dir = os.path.dirname(_script_path)
 _beoid_gaze_root = os.path.join(_script_dir, "..",
                                 "data/beoid-download/Bristol_Egocentric_Object_Interactions_Dataset_2014",
                                 "TrackedGaze_2DAnd3D"
-),
+)
 _beoid_root = os.path.join(_script_dir, "..", "generated/beoid/test-1")
 _ucf101_root = os.path.join(_script_dir, "..", "generated/ucf101/test-1")
 
