@@ -47,7 +47,7 @@ def showAttMap(img, attMaps, tagName, overlap = True, cmap='autumn', blur = Fals
             attMap = 1*(1-attMap**0.8).reshape(attMap.shape + (1,))*img + (attMap**0.8).reshape(attMap.shape+(1,)) * attMapV;
 
 
-        current_subplot_axes = ax[(i+1)/2, (i+1)%2]
+        current_subplot_axes = ax[int((i+1)/2), int((i+1)%2)]
         attention_map_subplot = current_subplot_axes.imshow(attMap, interpolation = 'bicubic', cmap=cmap)
         plt.colorbar(attention_map_subplot, ax=current_subplot_axes)
         current_subplot_axes.set_title(tagName[i])

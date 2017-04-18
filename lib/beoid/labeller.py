@@ -16,7 +16,7 @@ def labeller(filename):
     :param filename: The filename of the video being processed (e.g. 00_Desk2_pick-up_plug_334-366)
     :return: id: The neuron ID in the final layer representing the class specified by the filename
     """
-    parsed_filename = parse(filename, filename_parser.ActionVideo)
+    parsed_filename = parse(filename, filename_parser.Clip)
     label = parsed_filename.action.name
     label += "_" + parsed_filename.objects[0]
     for object in parsed_filename.objects[1:]:

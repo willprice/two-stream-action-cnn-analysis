@@ -1,3 +1,4 @@
+import transformers
 import ucf101
 import caffe
 import scipy.io as sio
@@ -17,4 +18,4 @@ frame_pattern = "frame{:06d}.jpg"
 net_caffemodel_path = '/home/will/nets/vgg_16_ucf101/cuhk_action_spatial_vgg_16_split1.caffemodel'
 net_prototxt_path = '/home/will/nets/vgg_16_ucf101/cuhk_action_spatial_vgg_16_split1_deploy.prototxt'
 
-transformer = cnn_utils.imagenet_transformer
+transformer = transformers.imagenet_transformer

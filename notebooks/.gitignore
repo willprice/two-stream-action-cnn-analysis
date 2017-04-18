@@ -1,1 +1,13 @@
+# Jupyter
 .ipynb_checkpoints
+
+# Data
+**.pickle
+
+# Figure outputs
+**.pdf
+**.png
+**.jpg
+**.fig
+**.tif
+**.gif
