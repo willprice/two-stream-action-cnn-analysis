@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
                 type=click.Path(exists=False))
 @click.option('--overlay-offset',
               help='Index of frame from start of flow batch to overlay',
-              default=10)
+              default=5)
 @click.option('--desaturate/--no-desaturate',
               default=True,
               help='Desaturate underlay image before overlaying excitation map')
@@ -56,7 +56,8 @@ def draw_temporal_excitation_maps(data_root,
     numerical_excitation_maps = pd.read_pickle(excitation_maps_pickle)
 
     def attention_map_callback(video_name, starting_frame_index, attention_map):
-        underlay = caffe.io.load_image(dataset.get_frame(video_name, starting_frame_index + overlay_offset))
+        underlay = caffe.io.load_image(dataset.get_frame(video_name,
+        starting_frame_index + 1 + overlay_offset))
         if desaturate:
             underlay = color.rgb2gray(underlay)
         attention_map_overlaid_image = toimage(

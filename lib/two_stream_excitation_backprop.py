@@ -29,12 +29,11 @@ def generate_temporal_excitation_maps(net, net_config, dataset, video_name, atte
 
     label_id = net_config.labeller(video_name)
     flow_batches_paths = dataset.get_flow_batches(video_name, batch_size=batch_size)
-
     for starting_frame_index, flow_batch_paths in enumerate(flow_batches_paths):
         flow_batch = np.array([load_and_transform(path) for path in flow_batch_paths])
-        flow_batch = flow_batch.reshape(1, 20, 224, 224)
+        flow_batch = flow_batch.reshape(1, batch_size*2, 224, 224)
         logger.info("Generating temporal excitation maps for frame {}-{}".format(
-            starting_frame_index, starting_frame_index + 20
+            starting_frame_index, starting_frame_index + batch_size*2
         ))
         eb.prop(flow_batch)
         attention_map = eb.backprop(label_id, contrastive=contrastive)

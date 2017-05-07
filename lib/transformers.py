@@ -9,7 +9,7 @@ def flow_transformer(net, input_blob='data'):
     transformer = caffe.io.Transformer(
         {'data': (1, 1, height, width)}
     )
-    transformer.set_mean('data', np.array([128]))
+    transformer.set_mean('data', np.array([127.5]))
     transformer.set_raw_scale('data', 255.0)
     return transformer
 
