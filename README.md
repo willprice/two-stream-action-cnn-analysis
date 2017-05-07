@@ -47,3 +47,9 @@ Working repository for feature analysis of 2SCNN
   numerical prefix can be run in any order.
 * `./run_jupyter.sh` is a helper script to setup my environment with the correct
   `LD_LIBRARY_PATH` and `PATH` env variables necessary to find Caffe, CuDNN etc.
+
+## Acknowledgments
+
+The code for performing contrastive excitation backprop is from
+https://github.com/jimmie33/Caffe-ExcitationBP, I also took inspiration from
+the code used to overlay attention maps on images.
